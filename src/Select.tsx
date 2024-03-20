@@ -1,32 +1,55 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./select.module.css";
-type SelectOption = {
+export type SelectOption = {
   label: string;
   value: string | number;
 };
-type SelectProps = {
-  options: SelectOption[];
-  // value: SelectOptions | undefined
+type MultipleSelectProps = {
+  multiple: true;
+  value: SelectOption[];
+  onChange: (value: SelectOption[]) => void;
+};
+
+type SingleSelectProps = {
+  multiple?: false;
   value?: SelectOption;
   onChange: (value: SelectOption | undefined) => void;
 };
 
-export default function Select({ value, onChange, options }: SelectProps) {
+type SelectProps = {
+  options: SelectOption[];
+  // value: SelectOptions | undefined
+} & (SingleSelectProps | MultipleSelectProps);
+
+export default function Select({
+  multiple,
+  value,
+  onChange,
+  options,
+}: SelectProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const clearOptions = () => {
-    onChange(undefined);
+    multiple ? onChange([]) : onChange(undefined);
   };
 
   function selectOption(option: SelectOption) {
-    if (option !== value) onChange(option);
+    if (multiple) {
+      if (value.includes(option)) {
+        onChange(value.filter((o) => o !== option));
+      } else {
+        onChange([...value, option]);
+      }
+    } else {
+      if (option !== value) onChange(option);
+    }
   }
 
   function isOptionSelected(option: SelectOption) {
-    return option == value;
+    return multiple ? value.includes(option) : option == value;
   }
 
   useEffect(() => {
@@ -41,7 +64,23 @@ export default function Select({ value, onChange, options }: SelectProps) {
         tabIndex={0}
         className={styles.container}
       >
-        <span className={styles.value}>{value?.label}</span>
+        <span className={styles.value}>
+          {multiple
+            ? value.map((v) => (
+                <button
+                  key={v.value}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    selectOption(v);
+                  }}
+                  className={styles["option-badge"]}
+                >
+                  {v.label}
+                  <span className={styles["remove-btn"]}>&times;</span>
+                </button>
+              ))
+            : value?.label}
+        </span>
         <button
           className={styles["clear-btn"]}
           onClick={(e) => {
